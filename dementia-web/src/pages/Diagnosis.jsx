@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { diagnosisQuestions } from "../data/diagnosisQuestions";
+import { db } from "../firebase";
+import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
 
 function Diagnosis() {
   const [answers, setAnswers] = useState(Array(diagnosisQuestions.length).fill(null));
   const navigate = useNavigate();
 
-  const handleSaveDiagnosis = (score, total) => {
+  const handleSaveDiagnosis = async (score, total) => {
     const today = new Date().toISOString().split("T")[0];
     const id = sessionStorage.getItem("loggedInUser");
 
@@ -16,21 +18,14 @@ function Diagnosis() {
       return;
     }
 
-    const stored = JSON.parse(localStorage.getItem("user_" + id));
-    const diagnosisRecords = stored.diagnosisRecords || [];
+    const diagnosisRef = collection(db, "diagnosisRecords");
+    const q = query(diagnosisRef, where("userId", "==", id), where("date", "==", today));
+    const snapshot = await getDocs(q);
 
-    if (diagnosisRecords.some(record => record.date === today)) {
+    if (!snapshot.empty) {
       alert("오늘은 이미 진단을 완료했습니다. 내일 다시 검사해주세요.");
       return;
     }
-
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-    const validRecords = diagnosisRecords.filter(record => {
-      const recordDate = new Date(record.date);
-      return recordDate >= oneYearAgo;
-    });
 
     let recommendation = "";
     if (score >= 8) {
@@ -41,16 +36,18 @@ function Diagnosis() {
       recommendation = "정상";
     }
 
-    const newRecord = {
+    await addDoc(diagnosisRef, {
+      userId: id,
       score,
       total,
       date: today,
       recommendation,
-    };
+    });
 
-    const updatedRecords = [...validRecords, newRecord];
-    stored.diagnosisRecords = updatedRecords;
-    localStorage.setItem("user_" + id, JSON.stringify(stored));
+    alert(score >= 6
+      ? "치매 가능성이 있습니다. 병원에서 정밀 진단을 받아보세요."
+      : "정상 범위입니다.");
+    navigate("/mypage");
   };
 
   const handleChange = (idx, value) => {
@@ -66,10 +63,7 @@ function Diagnosis() {
     }
 
     const score = answers.filter(Boolean).length;
-    handleSaveDiagnosis(score, answers.length); // ✅ 추가된 부분
-
-    alert(score >= 6 ? "치매 가능성이 있습니다. 병원에서 정밀 진단을 받아보세요." : "정상 범위입니다.");
-    navigate("/mypage");
+    handleSaveDiagnosis(score, answers.length);
   };
 
   return (

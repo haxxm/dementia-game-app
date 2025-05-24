@@ -1,6 +1,8 @@
-// GameCard.jsx - 카드 짝 맞추기 (난이도별 카드 수 + 실시간 타이머 표시)
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { updateMissionProgress, calculateLevel } from "../utils/missions"; // ⭐ 추가
+import { db } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 function GameCard() {
   const [cards, setCards] = useState([]);
@@ -78,24 +80,47 @@ function GameCard() {
     }
   };
 
-  const saveResult = (name, level, score) => {
-    const id = sessionStorage.getItem("loggedInUser");
-    const user = JSON.parse(localStorage.getItem("user_" + id));
-    const result = {
-      name,
-      level,
-      score,
-      date: new Date().toLocaleString(),
-    };
-    user.games = [...(user.games || []), result];
-    localStorage.setItem("user_" + id, JSON.stringify(user));
-  };
+const saveResult = async (name, level, score) => {
+  const id = sessionStorage.getItem("loggedInUser");
+  if (!id) return;
 
-  const formatTime = (sec) => {
-    const m = Math.floor(sec / 60).toString().padStart(2, '0');
-    const s = (sec % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
+  // 🔹 1. 게임 결과 저장
+  const result = {
+    userId: id,
+    name,
+    level,
+    score,
+    date: new Date().toISOString().split("T")[0],
   };
+  await addDoc(collection(db, "gameRecords"), result);
+
+  // 🔹 2. 포인트 계산
+  let bonus = 0;
+  if (level === "easy") bonus = 100;
+  else if (level === "normal") bonus = 200;
+  else if (level === "hard") bonus = 300;
+
+  // 🔹 3. 유저 데이터 로드
+  const userRef = doc(db, "users", id);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return;
+  const user = snap.data();
+
+  const newPoint = (user.point || 0) + bonus;
+  const newLevel = calculateLevel(newPoint);
+  const updatedUser = updateMissionProgress("card_game_success", {
+    ...user,
+    point: newPoint,
+    level: newLevel,
+  });
+
+  // 🔹 4. 업데이트 저장
+  await updateDoc(userRef, {
+    point: updatedUser.point,
+    level: updatedUser.level,
+    missions: updatedUser.missions || {},
+  });
+};
 
   return (
     <div style={{ textAlign: "center", marginTop: "30px" }}>

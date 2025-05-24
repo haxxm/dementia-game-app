@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
+import { createTodayMissions } from "./utils/missions"; // 경로 확인해서 수정
+
 
 function MyPage() {
   const [user, setUser] = useState(null);
@@ -19,6 +21,15 @@ function MyPage() {
     }
     const stored = JSON.parse(localStorage.getItem("user_" + id));
     if (stored) {
+      const today = new Date().toISOString().split("T")[0]
+
+      if (!stored.missions || stored.missionsDate !== today) {
+        // 오늘 미션 없거나 날짜가 다르면 새로 세팅
+        stored.missions = createTodayMissions();
+        stored.missionsDate = today;
+        localStorage.setItem("user_" + id, JSON.stringify(stored));
+      }
+      
       setUser(stored);
       setEditData({ name: stored.name, birth: stored.birth, phone: stored.phone });
     } else {
@@ -145,6 +156,8 @@ function MyPage() {
   return (
     <div style={{ textAlign: "center", marginTop: "40px" }}>
       <h2>{user.name}님의 마이페이지</h2>
+      <p>🏆 포인트: {user.point || 0}점</p>
+      <p>🎖️ 레벨: Lv.{user.level || 1}</p>
 
       {editMode ? (
         <div>
@@ -179,6 +192,18 @@ function MyPage() {
           <p>🟥 위험 | 🟡 주의 | 🟢 정상</p>
         </div>
       </div>
+      
+      {user.missions && (
+         <div style={{ marginTop: "50px" }}>
+          <h3>🎯 오늘의 미션</h3>
+          {user.missions.map((mission, idx) => (
+             <div key={idx} style={{ margin: "10px 0" }}>
+              <p>{mission.title}</p>
+              <p>{mission.progress} / {mission.target} {mission.done ? "✅ 완료!" : ""}</p>
+            </div>
+           ))}
+          </div>
+      )}
 
       <div style={{ marginTop: "50px", width: "90%", height: "400px", marginLeft: "auto", marginRight: "auto" }}>
         <h3>🎯 게임 실력 분석</h3>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { updateMissionProgress, calculateLevel } from "../utils/missions"; // ⭐ 추가
 
 function GameWord() {
   const words = ["바나나", "사과", "고양이", "자동차"];
@@ -8,6 +9,21 @@ function GameWord() {
 
   const check = () => {
     setResult(input === answer);
+
+    if (input === answer) {
+      const id = sessionStorage.getItem("loggedInUser");
+      const user = JSON.parse(localStorage.getItem("user_" + id));
+
+      // ⭐ 포인트 추가
+      let bonus = 100;
+      user.point = (user.point || 0) + bonus;
+      user.level = calculateLevel(user.point);
+
+      // ⭐ 단어 찾기 미션 진행 업데이트
+      const updatedUser = updateMissionProgress("word_game_success", user);
+
+      localStorage.setItem("user_" + id, JSON.stringify(updatedUser));
+    }
   };
 
   return (

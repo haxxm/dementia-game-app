@@ -9,6 +9,7 @@ import GameCard from './pages/Games/GameCard';
 import GameWord from './pages/Games/GameWord';
 import GameOX from './pages/Games/GameOX';
 import GameRPS from './pages/Games/GameRPS';
+import Ranking from './pages/Ranking';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/game/word" element={<GameWord />} />
         <Route path="/game/ox" element={<GameOX />} />
         <Route path="/game/rps" element={<GameRPS />} />
+        <Route path="/ranking" element={<Ranking />} />
       </Routes>
     </Router>
   );

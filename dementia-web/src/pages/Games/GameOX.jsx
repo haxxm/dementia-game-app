@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { updateMissionProgress, calculateLevel } from "../utils/missions"; // ⭐ 추가
 
 function GameOX() {
   const questions = [
@@ -13,6 +14,21 @@ function GameOX() {
 
   const check = (value) => {
     setResult(value === question.a);
+
+    if (value === question.a) {
+      const id = sessionStorage.getItem("loggedInUser");
+      const user = JSON.parse(localStorage.getItem("user_" + id));
+
+      // ⭐ 포인트 추가
+      let bonus = 100;
+      user.point = (user.point || 0) + bonus;
+      user.level = calculateLevel(user.point);
+
+      // ⭐ OX 퀴즈 미션 진행 업데이트
+      const updatedUser = updateMissionProgress("ox_quiz_success", user);
+
+      localStorage.setItem("user_" + id, JSON.stringify(updatedUser));
+    }
   };
 
   return (
